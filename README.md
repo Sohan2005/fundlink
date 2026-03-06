@@ -5,7 +5,13 @@ FundLink is a full-stack funding platform built for anyone who needs funding to 
 
 You create a profile, describe your project and what you need, and the platform matches you with the right investors, companies, and funding bodies that are actively looking to fund work like yours. No more sending the same generic application to whoever you can find.
 
-Live: [fundlink.vercel.app](https://fundlink.vercel.app)
+**Demo Account**
+If you want to explore the platform without creating an account, use these credentials:
+
+Email: testdev@fundlink.com  
+Password: test123
+
+Live: [fundlink.vercel.app](https://fundlink-site-g2qvtxov7-sohan2005s-projects.vercel.app/)
 
 ---
 
