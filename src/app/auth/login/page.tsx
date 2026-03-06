@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -15,7 +16,7 @@ interface FormState {
   error: string | null
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { signIn } = useAuth()
@@ -34,8 +35,6 @@ export default function LoginPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
-    
-    // Clear error when user starts typing
     if (formState.error) {
       setFormState(prev => ({ ...prev, error: null }))
     }
@@ -43,11 +42,9 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     setFormState({ isLoading: true, error: null })
 
     try {
-      // Validate fields
       if (!formData.email.trim() || !formData.password) {
         throw new Error('Please fill in all fields')
       }
@@ -58,7 +55,6 @@ export default function LoginPage() {
         throw new Error(error.message)
       }
 
-      // Success - redirect to dashboard or intended page
       router.push(redirectTo)
     } catch (error) {
       setFormState({
@@ -71,25 +67,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        {/* Header */}
         <div className="text-center">
           <Link href="/" className="inline-block">
             <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent mb-6">
               FundLink
             </div>
           </Link>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back
-          </h2>
-          <p className="text-gray-600">
-            Sign in to your account to continue your funding journey
-          </p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
+          <p className="text-gray-600">Sign in to your account to continue your funding journey</p>
         </div>
 
-        {/* Form Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Error Message */}
             {formState.error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                 <div className="flex items-center">
@@ -105,56 +94,34 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Email Field */}
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
-              </label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
+                type="email" id="email" name="email" value={formData.email}
+                onChange={handleInputChange} required
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-gray-400 text-gray-900 placeholder-gray-500"
-                placeholder="Enter your email"
-                disabled={formState.isLoading}
+                placeholder="Enter your email" disabled={formState.isLoading}
               />
             </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
               <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
+                type="password" id="password" name="password" value={formData.password}
+                onChange={handleInputChange} required
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-gray-400 text-gray-900 placeholder-gray-500"
-                placeholder="Enter your password"
-                disabled={formState.isLoading}
+                placeholder="Enter your password" disabled={formState.isLoading}
               />
             </div>
 
-            {/* Forgot Password Link */}
             <div className="text-right">
-              <Link 
-                href="/auth/forgot-password" 
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
-              >
+              <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200">
                 Forgot your password?
               </Link>
             </div>
 
-            {/* Submit Button */}
             <button
-              type="submit"
-              disabled={formState.isLoading}
+              type="submit" disabled={formState.isLoading}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-3 px-6 rounded-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ease-in-out transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {formState.isLoading ? (
@@ -171,30 +138,34 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Sign Up Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Don't have an account?{' '}
-              <Link 
-                href="/auth/signup" 
-                className="font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200"
-              >
+              Don&apos;t have an account?{' '}
+              <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200">
                 Sign up for free
               </Link>
             </p>
           </div>
         </div>
 
-        {/* Back to Home */}
         <div className="text-center">
-          <Link 
-            href="/" 
-            className="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors duration-200"
-          >
+          <Link href="/" className="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors duration-200">
             ← Back to Home
           </Link>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
