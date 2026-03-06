@@ -11,7 +11,7 @@ If you want to explore the platform without creating an account, use these crede
 Email: testdev@fundlink.com  
 Password: test123
 
-Live: [fundlink.vercel.app](https://fundlink-site-g2qvtxov7-sohan2005s-projects.vercel.app/)
+Live: [fundlink.vercel.app](https://fundlink-site.vercel.app/)
 
 ---
 
