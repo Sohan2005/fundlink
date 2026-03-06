@@ -1,17 +1,18 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { sampleCompanies, Company } from '@/lib/companiesData'
+import { sampleCompanies } from '@/lib/companiesData'
 
-export default function ApplyPage() {
+function ApplyContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const providerCompanyId = searchParams.get('company') // string | null
+  const providerCompanyId = searchParams.get('company')
   const { user } = useAuth()
   
   const companyId = searchParams.get('company')
@@ -19,24 +20,17 @@ export default function ApplyPage() {
 
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
-    // Step 1: Basic Information
     fullName: '',
     email: '',
     phone: '',
     location: '',
-    
-    // Step 2: Project Details
     projectName: '',
     projectDescription: '',
     industry: '',
     stage: '',
-    
-    // Step 3: Funding Request
     fundingAmount: '',
     fundingPurpose: '',
     timeline: '',
-    
-    // Step 4: Business Information
     website: '',
     linkedIn: '',
     pitchDeck: '',
@@ -64,13 +58,8 @@ export default function ApplyPage() {
     })
   }
 
-  const nextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 4))
-  }
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1))
-  }
+  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4))
+  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,38 +67,33 @@ export default function ApplyPage() {
     setError(null)
 
     try {
-      if (!selectedCompany) {
-        throw new Error('No company selected')
+      if (!selectedCompany) throw new Error('No company selected')
+
+      const applicationData = {
+        user_id: user?.id ?? null,
+        company_id: selectedCompany.id,
+        company_name: selectedCompany.name,
+        full_name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        location: formData.location,
+        project_name: formData.projectName,
+        project_description: formData.projectDescription,
+        industry: formData.industry,
+        stage: formData.stage,
+        funding_amount: parseFloat(formData.fundingAmount) || 0,
+        funding_purpose: formData.fundingPurpose,
+        timeline: formData.timeline,
+        website: formData.website || null,
+        linkedin_url: formData.linkedIn || null,
+        pitch_deck_url: formData.pitchDeck || null,
+        additional_info: formData.additionalInfo || null,
+        status: 'pending',
+        submitted_at: new Date().toISOString(),
+        provider_company_slug: providerCompanyId,
       }
 
-      // Prepare application data
-const applicationData = {
-  user_id: user?.id ?? null,
-  company_id: selectedCompany.id,
-  company_name: selectedCompany.name,
-  full_name: formData.fullName,
-  email: formData.email,
-  phone: formData.phone,
-  location: formData.location,
-  project_name: formData.projectName,
-  project_description: formData.projectDescription,
-  industry: formData.industry,
-  stage: formData.stage,
-  funding_amount: parseFloat(formData.fundingAmount) || 0,
-  funding_purpose: formData.fundingPurpose,
-  timeline: formData.timeline,
-  website: formData.website || null,
-  linkedin_url: formData.linkedIn || null,
-  pitch_deck_url: formData.pitchDeck || null,
-  additional_info: formData.additionalInfo || null,
-  status: 'pending',
-  submitted_at: new Date().toISOString(),
-  provider_company_slug: providerCompanyId, // NEW
-}
-
-
-      // Insert application into database
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('applications')
         .insert(applicationData)
         .select()
@@ -117,7 +101,6 @@ const applicationData = {
 
       if (insertError) throw insertError
 
-      // ✅ Send confirmation email
       try {
         await fetch('/api/send-email', {
           method: 'POST',
@@ -129,17 +112,13 @@ const applicationData = {
             companyName: selectedCompany.name
           })
         })
-        console.log('✅ Confirmation email sent')
       } catch (emailError) {
         console.error('Failed to send email:', emailError)
-        // Don't fail the application if email fails
       }
 
-      // Show success and redirect
       setSuccess(true)
       setLoading(false)
       
-      // Redirect after 3 seconds
       setTimeout(() => {
         if (user) {
           router.push('/dashboard/applications')
@@ -148,9 +127,9 @@ const applicationData = {
         }
       }, 3000)
 
-    } catch (err: any) {
-      console.error('Error submitting application:', err)
-      setError(err.message || 'Failed to submit application')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to submit application'
+      setError(message)
       setLoading(false)
     }
   }
@@ -193,19 +172,17 @@ const applicationData = {
               Your application to {selectedCompany?.name || 'the selected company'} has been submitted.
             </p>
             {selectedCompany && (
-              <>
-                <p className="text-gray-600 mb-4">
-                  <strong>Expected response time:</strong> {selectedCompany.responseTime}
-                </p>
-              </>
+              <p className="text-gray-600 mb-4">
+                <strong>Expected response time:</strong> {selectedCompany.responseTime}
+              </p>
             )}
             <p className="text-sm text-gray-500 mb-6">
-              {user 
-                ? 'Redirecting to your dashboard to track this application...' 
+              {user
+                ? 'Redirecting to your dashboard to track this application...'
                 : 'Create an account to track your application status and get updates!'}
             </p>
             <p className="text-sm text-green-600 font-medium">
-              📧 Check your email for confirmation!
+              Check your email for confirmation!
             </p>
           </div>
         </div>
@@ -218,7 +195,6 @@ const applicationData = {
       <Navigation />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
         <div className="mb-8">
           <Link href={`/companies/${selectedCompany.id}`} className="text-blue-600 hover:underline mb-4 inline-block">
             ← Back to {selectedCompany.name}
@@ -234,7 +210,6 @@ const applicationData = {
           </div>
         </div>
 
-        {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             {[1, 2, 3, 4].map((step) => (
@@ -245,9 +220,7 @@ const applicationData = {
                   {step}
                 </div>
                 {step < 4 && (
-                  <div className={`w-20 h-1 mx-2 ${
-                    currentStep > step ? 'bg-black' : 'bg-gray-200'
-                  }`} />
+                  <div className={`w-20 h-1 mx-2 ${currentStep > step ? 'bg-black' : 'bg-gray-200'}`} />
                 )}
               </div>
             ))}
@@ -266,115 +239,60 @@ const applicationData = {
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-8">
-          {/* Step 1: Basic Information */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-black mb-6">Basic Information</h2>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  required
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="John Doe"
-                />
+                  placeholder="John Doe" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
+                <input type="email" name="email" value={formData.email} onChange={handleChange} required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="john@example.com"
-                />
+                  placeholder="john@example.com" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
+                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="+1 (555) 123-4567"
-                />
+                  placeholder="+1 (555) 123-4567" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Location *</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleChange}
-                  required
+                <input type="text" name="location" value={formData.location} onChange={handleChange} required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="San Francisco, CA"
-                />
+                  placeholder="San Francisco, CA" />
               </div>
-
-              <button
-                type="button"
-                onClick={nextStep}
-                className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
-              >
+              <button type="button" onClick={nextStep}
+                className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium">
                 Continue
               </button>
             </div>
           )}
 
-          {/* Step 2: Project Details */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-black mb-6">Project Details</h2>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Project Name *</label>
-                <input
-                  type="text"
-                  name="projectName"
-                  value={formData.projectName}
-                  onChange={handleChange}
-                  required
+                <input type="text" name="projectName" value={formData.projectName} onChange={handleChange} required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="My Startup"
-                />
+                  placeholder="My Startup" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Project Description *</label>
-                <textarea
-                  name="projectDescription"
-                  value={formData.projectDescription}
-                  onChange={handleChange}
-                  required
-                  rows={5}
+                <textarea name="projectDescription" value={formData.projectDescription} onChange={handleChange} required rows={5}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="Describe your project, what problem it solves, and your target market..."
-                />
+                  placeholder="Describe your project, what problem it solves, and your target market..." />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Industry *</label>
-                <select
-                  name="industry"
-                  value={formData.industry}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                >
+                <select name="industry" value={formData.industry} onChange={handleChange} required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900">
                   <option value="">Select Industry</option>
                   <option value="Technology">Technology</option>
                   <option value="Healthcare">Healthcare</option>
@@ -386,16 +304,10 @@ const applicationData = {
                   <option value="Other">Other</option>
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Business Stage *</label>
-                <select
-                  name="stage"
-                  value={formData.stage}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                >
+                <select name="stage" value={formData.stage} onChange={handleChange} required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900">
                   <option value="">Select Stage</option>
                   <option value="Idea">Idea Stage</option>
                   <option value="MVP">MVP/Prototype</option>
@@ -404,68 +316,39 @@ const applicationData = {
                   <option value="Established">Established</option>
                 </select>
               </div>
-
               <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
+                <button type="button" onClick={prevStep}
+                  className="flex-1 px-6 py-3 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors font-medium">
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
-                >
+                <button type="button" onClick={nextStep}
+                  className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium">
                   Continue
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 3: Funding Request */}
           {currentStep === 3 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-black mb-6">Funding Request</h2>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Funding Amount Requested *</label>
-                <input
-                  type="number"
-                  name="fundingAmount"
-                  value={formData.fundingAmount}
-                  onChange={handleChange}
-                  required
-                  min="0"
+                <input type="number" name="fundingAmount" value={formData.fundingAmount} onChange={handleChange} required min="0"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="50000"
-                />
+                  placeholder="50000" />
                 <p className="text-sm text-gray-500 mt-1">Enter amount in USD</p>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Purpose of Funding *</label>
-                <textarea
-                  name="fundingPurpose"
-                  value={formData.fundingPurpose}
-                  onChange={handleChange}
-                  required
-                  rows={4}
+                <textarea name="fundingPurpose" value={formData.fundingPurpose} onChange={handleChange} required rows={4}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="How will you use the funding? (e.g., product development, marketing, hiring)"
-                />
+                  placeholder="How will you use the funding? (e.g., product development, marketing, hiring)" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Timeline *</label>
-                <select
-                  name="timeline"
-                  value={formData.timeline}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                >
+                <select name="timeline" value={formData.timeline} onChange={handleChange} required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900">
                   <option value="">When do you need funding?</option>
                   <option value="Immediate">Immediate (1-2 weeks)</option>
                   <option value="1 month">Within 1 month</option>
@@ -474,93 +357,54 @@ const applicationData = {
                   <option value="Flexible">Flexible</option>
                 </select>
               </div>
-
               <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
+                <button type="button" onClick={prevStep}
+                  className="flex-1 px-6 py-3 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors font-medium">
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
-                >
+                <button type="button" onClick={nextStep}
+                  className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium">
                   Continue
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 4: Additional Details */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold text-black mb-6">Additional Information</h2>
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                <input
-                  type="url"
-                  name="website"
-                  value={formData.website}
-                  onChange={handleChange}
+                <input type="url" name="website" value={formData.website} onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="https://myproject.com"
-                />
+                  placeholder="https://myproject.com" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn Profile</label>
-                <input
-                  type="url"
-                  name="linkedIn"
-                  value={formData.linkedIn}
-                  onChange={handleChange}
+                <input type="url" name="linkedIn" value={formData.linkedIn} onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="https://linkedin.com/in/yourprofile"
-                />
+                  placeholder="https://linkedin.com/in/yourprofile" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Pitch Deck URL</label>
-                <input
-                  type="url"
-                  name="pitchDeck"
-                  value={formData.pitchDeck}
-                  onChange={handleChange}
+                <input type="url" name="pitchDeck" value={formData.pitchDeck} onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="https://drive.google.com/..."
-                />
+                  placeholder="https://drive.google.com/..." />
                 <p className="text-sm text-gray-500 mt-1">Link to Google Drive, Dropbox, or similar</p>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Additional Information</label>
-                <textarea
-                  name="additionalInfo"
-                  value={formData.additionalInfo}
-                  onChange={handleChange}
-                  rows={4}
+                <textarea name="additionalInfo" value={formData.additionalInfo} onChange={handleChange} rows={4}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent placeholder:text-gray-400 text-gray-900"
-                  placeholder="Any other information you'd like to share..."
-                />
+                  placeholder="Any other information you would like to share..." />
               </div>
-
               <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  className="flex-1 px-6 py-3 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
+                <button type="button" onClick={prevStep}
+                  className="flex-1 px-6 py-3 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors font-medium">
                   Back
                 </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-                >
+                <button type="submit" disabled={loading}
+                  className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium">
                   {loading ? 'Submitting...' : 'Submit your project for funding consideration'}
                 </button>
               </div>
@@ -569,5 +413,17 @@ const applicationData = {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function ApplyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    }>
+      <ApplyContent />
+    </Suspense>
   )
 }
